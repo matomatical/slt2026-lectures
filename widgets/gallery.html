@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Widget gallery</title>
+  <link rel="stylesheet" href="../theme/slt.css">
+  <style>
+    body { color: var(--slt-foreground); font-family: var(--slt-body-font);
+           font-size: 28px; margin: 2em; }
+    section { margin-bottom: 3em; }
+    code { color: var(--slt-muted); font-size: 0.6em; }
+  </style>
+  <script type="module" src="index.js"></script>
+</head>
+<body>
+  <!-- One section per widget configuration, for developing widgets outside
+       the deck. Each shows the markup that produces it. -->
+  <section>
+    <code>&lt;slt-level-set k="w1^2 * w2^2"&gt;</code>
+    <slt-level-set k="w1^2 * w2^2"></slt-level-set>
+  </section>
+  <section>
+    <code>&lt;slt-level-set k="w1^2 + w2^2"&gt;</code>
+    <slt-level-set k="w1^2 + w2^2"></slt-level-set>
+  </section>
+</body>
+</html>

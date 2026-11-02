@@ -1,0 +1,168 @@
+/* Deck theme: pure black background, white text, EB Garamond body,
+   TeX Gyre Chorus (chancery) display face for titles. */
+
+@font-face {
+  font-family: "EB Garamond";
+  src: url("fonts/EBGaramond12-Regular.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "EB Garamond";
+  src: url("fonts/EBGaramond12-Italic.woff") format("woff");
+  font-weight: normal;
+  font-style: italic;
+}
+@font-face {
+  font-family: "EB Garamond";
+  src: url("fonts/EBGaramond12-Bold.woff") format("woff");
+  font-weight: bold;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Chorus";
+  src: url("fonts/texgyrechorus-mediumitalic.otf") format("opentype");
+}
+
+:root {
+  --slt-background: #000;
+  --slt-foreground: #fff;
+  --slt-muted: #999;
+  --slt-accent: #ffdc00;
+  --slt-body-font: "EB Garamond", Garamond, serif;
+  --slt-display-font: "Chorus", "EB Garamond", serif;
+}
+
+html,
+body,
+.reveal-viewport {
+  background: var(--slt-background);
+}
+
+.reveal {
+  font-family: var(--slt-body-font);
+  font-size: 36px;
+  color: var(--slt-foreground);
+}
+
+.reveal .slides {
+  text-align: left;
+}
+
+.reveal .slides section {
+  line-height: 1.3;
+}
+
+/* Headings. */
+
+.reveal h1,
+.reveal h2 {
+  font-family: var(--slt-display-font);
+  font-weight: normal;
+  margin: 0 0 0.6em 0;
+}
+.reveal h1 {
+  font-size: 2.6em;
+}
+.reveal h2 {
+  font-size: 1.6em;
+}
+.reveal h3 {
+  font-size: 1.1em;
+  font-style: italic;
+  font-weight: normal;
+  margin: 0 0 0.4em 0;
+}
+
+/* Title slide and section-title slides (level-1 headings) are centred. */
+
+.reveal #title-slide,
+.reveal section.level1 > h1:only-child {
+  text-align: center;
+}
+.reveal #title-slide {
+  padding-top: 18%;
+}
+.reveal #title-slide .subtitle {
+  font-style: italic;
+  font-size: 1.2em;
+  margin-bottom: 1.5em;
+}
+.reveal #title-slide .author,
+.reveal #title-slide .date {
+  margin: 0.2em 0;
+}
+.reveal section.level1 > h1:only-child {
+  margin-top: 25%;
+}
+
+/* Body text. */
+
+.reveal .slides p {
+  margin: 0 0 0.6em 0;
+}
+.reveal .slides ul,
+.reveal .slides ol {
+  margin: 0 0 0.6em 1.2em;
+}
+.reveal .slides li {
+  margin: 0.25em 0;
+}
+.reveal .slides ul > li::marker {
+  content: "•  ";
+}
+.reveal .slides em {
+  font-style: italic;
+}
+.reveal .slides strong {
+  font-weight: bold;
+}
+.reveal .slides a {
+  color: var(--slt-foreground);
+  text-decoration: underline;
+}
+.reveal .slides .katex-display {
+  margin: 0.6em 0;
+}
+.reveal .slides .muted {
+  color: var(--slt-muted);
+}
+
+/* Images, videos and widgets fill available width, centred. */
+
+.reveal .slides img,
+.reveal .slides video {
+  max-width: 100%;
+  max-height: 520px;
+  display: block;
+  margin: 0 auto;
+}
+
+/* Two columns, via pandoc's `:::: columns` / `::: column` divs. */
+
+.reveal .slides .columns {
+  display: flex;
+  gap: 1.5em;
+}
+.reveal .slides .column {
+  flex: 1;
+}
+
+/* Chrome: progress bar and slide number in muted grey. */
+
+.reveal .progress {
+  color: var(--slt-muted);
+  height: 2px;
+}
+.reveal .slide-number {
+  background: transparent;
+  color: var(--slt-muted);
+  font-family: var(--slt-body-font);
+  font-size: 18px;
+}
+
+/* Chalk slides: blank pages for drawing on, optionally with a heading. */
+
+.reveal section.chalk > h2:empty {
+  display: none;
+}
