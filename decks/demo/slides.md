@@ -1,6 +1,6 @@
 ---
 title: Singular Learning Theory
-subtitle: Lecture 1 · Introduction and Degeneracies
+subtitle: Demo
 author: Matthew Farrugia-Roberts
 date: 3 November 2026
 ---
@@ -39,6 +39,6 @@ Speaker notes: press S to open the speaker view.
 ## Chalk talk {.chalk}
 
 Press C to draw on this slide: 1–4 choose the ink, E the eraser, L the laser
-pointer, and Ctrl+Z undoes. B opens a blank board.
+pointer, and Ctrl+Z undoes. Use the next blank slide as a board.
 
 ## {#board-example .chalk}

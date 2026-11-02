@@ -4,17 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>$pagetitle$</title>
-  <link rel="stylesheet" href="vendor/reveal.js/reset.css">
-  <link rel="stylesheet" href="vendor/reveal.js/reveal.css">
-  <link rel="stylesheet" href="vendor/katex/katex.min.css">
-  <link rel="stylesheet" href="theme/slt.css">
-  <link rel="stylesheet" href="theme/ink.css">
+  <link rel="stylesheet" href="$asset-prefix$vendor/reveal.js/reset.css">
+  <link rel="stylesheet" href="$asset-prefix$vendor/reveal.js/reveal.css">
+  <link rel="stylesheet" href="$asset-prefix$vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="$asset-prefix$theme/slt.css">
+  <link rel="stylesheet" href="$asset-prefix$theme/ink.css">
 </head>
-<body$if(ink-src)$ data-ink-src="$ink-src$"$endif$>
+<body$if(progress-color)$ data-progress-color="$progress-color$"$endif$$if(ink-src)$ data-ink-src="$ink-src$"$endif$>
   <div class="reveal">
     <div class="slides">
 $if(title)$
-      <section id="title-slide">
+      <section id="title-slide"$if(title-landscape)$ data-landscape="$title-landscape$"$endif$>
         <h1 class="title">$title$</h1>
 $if(subtitle)$
         <p class="subtitle">$subtitle$</p>
@@ -30,7 +30,7 @@ $endif$
 $body$
     </div>
   </div>
-  <script type="module" src="theme/deck.js"></script>
-  <script type="module" src="widgets/index.js"></script>
+  <script type="module" src="$asset-prefix$theme/deck.js"></script>
+  <script type="module" src="$asset-prefix$widgets/index.js"></script>
 </body>
 </html>

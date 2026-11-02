@@ -4,6 +4,8 @@ import Reveal from "../vendor/reveal.js/reveal.mjs";
 import RevealNotes from "../vendor/reveal.js/plugin/notes.mjs";
 import katex from "../vendor/katex/katex.mjs";
 import RevealInk from "./ink.js";
+import RevealSectionProgress from "./section-progress.js";
+import RevealTitleLandscape from "./title-landscape.js";
 
 // LaTeX macros available in every formula on every slide.
 const MACROS = {
@@ -31,7 +33,9 @@ Reveal.initialize({
   transition: "none",
   backgroundTransition: "none",
   controls: false,
-  progress: true,
+  // Leave B unassigned so an accidental press cannot blank the screen.
+  keyboard: { 66: null },
+  progress: false,
   slideNumber: "c/t",
   // Always show slides (never reveal.js's narrow-screen scrolling layout),
   // so that ink stays on its slide.
@@ -42,9 +46,9 @@ Reveal.initialize({
     penWidth: 4,
     eraserSize: 40,
     laserColor: "#ff2a2a",
-    // Saved drawings to show, set via `ink-src` metadata in slides.md.
+    // Saved drawings to show, set via the deck's `ink-src` metadata.
     src: document.body.dataset.inkSrc || null,
   },
 
-  plugins: [RevealNotes, RevealInk],
+  plugins: [RevealNotes, RevealInk, RevealSectionProgress, RevealTitleLandscape],
 });

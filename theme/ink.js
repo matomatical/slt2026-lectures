@@ -1,7 +1,6 @@
 // Ink layer for reveal.js: draw on slides with a pen, mouse or touch screen.
 //
-// Every slide has two layers of ink: one over the slide itself, and a board,
-// a blank page that can be opened over the slide. A layer is a list of
+// Every slide has a layer of ink over its content. A layer is a list of
 // operations (strokes, erasures and clears) in slide coordinates, replayed
 // onto a canvas inside the deck's slide container, so ink scales with the
 // slide and stays attached to its content. Undo and redo move operations
@@ -33,7 +32,6 @@ const SHORTCUTS = [
   ["1, 2, ...", "Ink: pen colour"],
   ["E", "Ink: eraser (toggle); or drag with the right button"],
   ["L", "Ink: laser pointer (toggle)"],
-  ["B", "Ink: board (toggle)"],
   ["CTRL + Z", "Ink: undo"],
   ["CTRL + SHIFT + Z", "Ink: redo"],
   ["DEL", "Ink: clear slide (undoable)"],
@@ -49,7 +47,6 @@ const ICONS = {
   undo: '<path d="M9 13L4 8l5-5"/><path d="M4 8h10a6 6 0 0 1 0 12h-4"/>',
   redo: '<path d="M15 13l5-5-5-5"/><path d="M20 8H10a6 6 0 0 0 0 12h4"/>',
   clear: '<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/>',
-  board: '<rect x="3" y="4" width="18" height="13"/><path d="M12 17v4"/><path d="M8 21h8"/>',
 };
 
 export default function RevealInk() {
@@ -80,8 +77,6 @@ class Ink {
     this.active = false; // whether pointer input goes to the ink layer
     this.tool = "pen"; // "pen", "eraser" or "laser"
     this.colorIndex = 0;
-    this.boardOpen = false;
-    this.activeBeforeBoard = false;
     this.gesture = null; // the stroke, erasure or laser trace being drawn
     this.cursor = null; // pointer position in slide coordinates, if over the slide
     this.laserTraces = []; // { points, releasedAt }
@@ -107,10 +102,7 @@ class Ink {
     deck.on("resize", () => this.resize());
     window.addEventListener("resize", () => requestAnimationFrame(() => this.resize()));
     deck.on("slidechanged", () => this.onSlideChanged());
-    deck.on("overviewshown", () => {
-      this.setBoard(false);
-      this.setActive(false);
-    });
+    deck.on("overviewshown", () => this.setActive(false));
     window.addEventListener("storage", (event) => this.onStorage(event));
   }
 
@@ -122,10 +114,9 @@ class Ink {
     this.layerElement.setAttribute("data-prevent-swipe", "");
     this.layerElement.style.width = `${this.width}px`;
     this.layerElement.style.height = `${this.height}px`;
-    this.boardElement = element("div", "ink-board");
     this.inkCanvas = element("canvas", "ink-canvas");
     this.overlayCanvas = element("canvas", "ink-overlay");
-    this.layerElement.append(this.boardElement, this.inkCanvas, this.overlayCanvas);
+    this.layerElement.append(this.inkCanvas, this.overlayCanvas);
     this.deck.getSlidesElement().append(this.layerElement);
   }
 
@@ -158,7 +149,6 @@ class Ink {
       undo: button("undo", "Undo (Ctrl+Z)", ICONS.undo, () => this.undo()),
       redo: button("redo", "Redo (Ctrl+Shift+Z)", ICONS.redo, () => this.redo()),
       clear: button("clear", "Clear slide (Delete)", ICONS.clear, () => this.clear()),
-      board: button("board", "Board (B)", ICONS.board, () => this.setBoard(!this.boardOpen)),
     };
     this.buttons.laser.style.color = this.options.laserColor;
 
@@ -171,7 +161,6 @@ class Ink {
       this.buttons.undo,
       this.buttons.redo,
       this.buttons.clear,
-      this.buttons.board,
     );
     this.toolbar = element("div", "ink-toolbar");
     this.toolbar.append(this.buttons.toggle, tools);
@@ -189,7 +178,6 @@ class Ink {
     });
     buttons.eraser.classList.toggle("selected", tool === "eraser");
     buttons.laser.classList.toggle("selected", tool === "laser");
-    buttons.board.classList.toggle("selected", this.boardOpen);
     const layer = this.layer();
     buttons.undo.disabled = layer.ops.length === 0;
     buttons.redo.disabled = layer.redo.length === 0;
@@ -221,11 +209,7 @@ class Ink {
     return `slide-${h}-${v ?? 0}`;
   }
 
-  layerKey() {
-    return this.boardOpen ? `${this.slideKey()}/board` : this.slideKey();
-  }
-
-  layer(key = this.layerKey()) {
+  layer(key = this.slideKey()) {
     if (!this.layers.has(key)) this.layers.set(key, { ops: [], redo: [] });
     return this.layers.get(key);
   }
@@ -233,13 +217,13 @@ class Ink {
   // Record a change to a layer: save it, and redraw it if it is showing.
   layerChanged(key) {
     this.save(key);
-    if (key === this.layerKey()) this.renderInk();
+    if (key === this.slideKey()) this.renderInk();
     this.updateToolbar();
   }
 
   undo() {
     if (this.gesture) return;
-    const key = this.layerKey();
+    const key = this.slideKey();
     const layer = this.layer(key);
     if (layer.ops.length === 0) return;
     layer.redo.push(layer.ops.pop());
@@ -248,7 +232,7 @@ class Ink {
 
   redo() {
     if (this.gesture) return;
-    const key = this.layerKey();
+    const key = this.slideKey();
     const layer = this.layer(key);
     if (layer.redo.length === 0) return;
     layer.ops.push(layer.redo.pop());
@@ -257,7 +241,7 @@ class Ink {
 
   clear() {
     if (this.gesture) return;
-    const key = this.layerKey();
+    const key = this.slideKey();
     const layer = this.layer(key);
     if (visibleOperations(layer.ops).length === 0) return;
     layer.ops.push({ kind: "clear" });
@@ -288,21 +272,9 @@ class Ink {
     this.setActive(true);
   }
 
-  // Opening the board starts drawing; closing it restores the previous state.
-  setBoard(open) {
-    if (open === this.boardOpen) return;
-    if (this.gesture) this.finishGesture();
-    if (open) this.activeBeforeBoard = this.active;
-    this.boardOpen = open;
-    this.layerElement.classList.toggle("board", open);
-    this.renderInk();
-    this.setActive(open || this.activeBeforeBoard);
-  }
-
   onSlideChanged() {
     if (this.gesture) this.finishGesture();
     this.laserTraces = [];
-    if (this.boardOpen) this.setBoard(false);
     this.renderInk();
     this.updateToolbar();
     this.requestOverlay();
@@ -351,7 +323,7 @@ class Ink {
     }
     const point = this.slidePoint(event, this.overlayCanvas.getBoundingClientRect());
     this.cursor = point;
-    const gesture = { pointerId: event.pointerId, tool, layerKey: this.layerKey() };
+    const gesture = { pointerId: event.pointerId, tool, layerKey: this.slideKey() };
     if (tool === "laser") {
       gesture.trace = { points: [...point], releasedAt: null };
       this.laserTraces.push(gesture.trace);
@@ -411,7 +383,7 @@ class Ink {
     }
     const operation = gesture.operation;
     const pointCount = operation.points.length / 2;
-    if (gesture.tool === "pen" && pointCount > 1 && gesture.layerKey === this.layerKey()) {
+    if (gesture.tool === "pen" && pointCount > 1 && gesture.layerKey === this.slideKey()) {
       drawStroke(this.inkContext(), operation, pointCount, pointCount);
     }
     const layer = this.layer(gesture.layerKey);
@@ -458,15 +430,12 @@ class Ink {
         return () => this.selectTool("eraser");
       case "l":
         return () => this.selectTool("laser");
-      case "b":
-        return () => this.setBoard(!this.boardOpen);
       case "delete":
       case "backspace":
         return event.shiftKey ? () => this.forgetAll() : () => this.clear();
       case "d":
         return () => this.download();
       case "escape":
-        if (this.boardOpen) return () => this.setBoard(false);
         if (this.active) return () => this.setActive(false);
         return null;
       default:
@@ -496,8 +465,15 @@ class Ink {
     for (const operation of visibleOperations(this.layer().ops)) {
       applyOperation(context, operation);
     }
-    if (this.gesture?.operation && this.gesture.layerKey === this.layerKey()) {
-      applyOperation(context, this.gesture.operation);
+    if (this.gesture?.operation && this.gesture.layerKey === this.slideKey()) {
+      const operation = this.gesture.operation;
+      if (operation.kind === "stroke") {
+        // The final segment is added on release; while drawing, the curve
+        // ends at the midpoint before the last sample.
+        drawStroke(context, operation, 1, Math.max(1, operation.points.length / 2 - 1));
+      } else {
+        applyOperation(context, operation);
+      }
     }
   }
 
@@ -618,7 +594,7 @@ class Ink {
   warnAboutMissingSlides() {
     const missing = [...this.layers]
       .filter(([key, layer]) => layer.ops.length > 0 && !key.startsWith("slide-"))
-      .map(([key]) => key.replace(/\/board$/, ""))
+      .map(([key]) => key)
       .filter((id) => !document.getElementById(id));
     if (missing.length > 0) {
       console.warn("ink: drawings for slides not in this deck:", [...new Set(missing)]);
@@ -634,7 +610,7 @@ class Ink {
       ? JSON.parse(event.newValue)
       : structuredClone(this.savedLayers.get(key) ?? []);
     layer.redo = [];
-    if (key === this.layerKey()) this.renderInk();
+    if (key === this.slideKey()) this.renderInk();
     this.updateToolbar();
   }
 
