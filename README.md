@@ -31,12 +31,15 @@ the deck, for developing widgets.
     are defined here) and configures reveal.js and its plugins.
   - `slt.css`, `fonts/`: the visual style (black background, white text,
     EB Garamond with TeX Gyre Chorus for titles).
+  - `ink.js`, `ink.css`: the ink layer, a reveal.js plugin for drawing on
+    slides (see Drawing below).
+- `filters/`: pandoc Lua filters run by the build; `check-slide-ids.lua`
+  warns about untitled slides (see Drawing below).
 - `widgets/`: interactive visualisations, one custom HTML element per file,
   registered by `index.js`.
-- `drawings/`, `media/` (optional): saved chalkboard drawings, and images or
-  videos referenced from the slides. Copied into `build/` if present.
-- `package.json`: pinned versions of reveal.js, KaTeX, the reveal.js
-  chalkboard plugin, and Font Awesome (which the plugin's buttons use).
+- `drawings/`, `media/` (optional): saved drawings, and images or videos
+  referenced from the slides. Copied into `build/` if present.
+- `package.json`: pinned versions of reveal.js and KaTeX.
 - `makefile`: the build; copies only the needed files from `node_modules/`
   into `build/vendor/`.
 
@@ -65,7 +68,7 @@ Beyond ordinary Markdown and `$...$`/`$$...$$` maths:
 
 ![](media/animation.gif)       <!-- image; <video> tags also work -->
 
-## {.chalk}                    <!-- blank slide for drawing -->
+## {#board-volume .chalk}      <!-- blank slide for drawing -->
 ```
 
 ## Widgets
@@ -95,22 +98,38 @@ Conventions, following `slt-level-set.js`:
 
 ## Drawing
 
-The [chalkboard plugin](https://github.com/rajgoel/reveal.js-plugins/tree/master/chalkboard)
-provides two drawing modes, toggled by keyboard or by the buttons at the
-bottom left:
+The ink layer (`theme/ink.js`) draws on the current slide with a pen tablet,
+mouse or touch screen. Ink is recorded in slide coordinates and drawn inside
+the slide, so it stays attached to the slide's content when the window is
+resized or zoomed. A toolbar at the bottom left mirrors the keys:
 
-| Key         | Action                                         |
-| ----------- | ---------------------------------------------- |
-| C           | toggle drawing on the current slide            |
-| B           | toggle the full-screen board                   |
-| X / Y       | next / previous ink colour                     |
-| right-drag  | erase                                          |
-| DEL         | clear the current drawing                      |
-| D           | download all drawings as JSON                  |
+| Key              | Action                                                |
+| ---------------- | ----------------------------------------------------- |
+| C                | toggle drawing (pointer input draws instead of clicking) |
+| 1, 2, 3, 4       | pen colour: white, orange, grey, magenta              |
+| E                | eraser (a square); press again for the pen            |
+| right-drag       | erase, whatever the tool                              |
+| L                | laser pointer: its trace fades on release, unrecorded |
+| B                | board: a blank page over the slide, with its own ink  |
+| Ctrl+Z           | undo                                                  |
+| Ctrl+Shift+Z     | redo                                                  |
+| Delete           | clear the slide (or board); undoable                  |
+| Shift+Delete     | forget all drawings stored in this browser (asks first) |
+| D                | download all drawings as `drawings.json`              |
+| Esc              | close the board, then stop drawing                    |
 
-Drawings are kept in the browser's session storage, so they survive
-reloading the page but not closing the tab. To publish drawings with the
-deck, download them (D), save the file as `drawings/lecture.json`, and add
-`chalkboard-src: drawings/lecture.json` to the metadata block at the top of
-`slides.md`. Saved drawings replay on their slides, and are included in PDF
-export (board drawings only).
+Colours, pen width, eraser size and laser settings are in `theme/deck.js`.
+
+Drawings are stored in the browser (localStorage), so they survive reloading
+and closing the tab, and the speaker view's previews show them. Each slide's
+drawings are keyed by its id, which pandoc derives from the heading: renaming
+a heading detaches its drawings (the browser console lists drawings whose
+slide is missing). Untitled slides get ids from their position among untitled
+slides, so give them explicit ids (`## {#board-volume .chalk}`); the build
+warns about untitled slides without one.
+
+To publish drawings with the deck: download them (D), save the file as
+`drawings/lecture.json`, and add `ink-src: drawings/lecture.json` to the
+metadata block at the top of `slides.md`. Viewers then see the saved
+drawings, except on slides where they have drawn their own. The ink layer
+is not shown in reveal.js's PDF print view.

@@ -38,7 +38,7 @@ Speaker notes: press S to open the speaker view.
 
 ## Chalk talk {.chalk}
 
-Press C to draw on this slide, B for a full-screen board, D to download
-the drawings.
+Press C to draw on this slide: 1–4 choose the ink, E the eraser, L the laser
+pointer, and Ctrl+Z undoes. B opens a blank board.
 
-## {.chalk}
+## {#board-example .chalk}

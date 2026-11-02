@@ -1,5 +1,10 @@
 // Deck start-up: typeset maths with KaTeX, then start reveal.js and its plugins.
 
+import Reveal from "../vendor/reveal.js/reveal.mjs";
+import RevealNotes from "../vendor/reveal.js/plugin/notes.mjs";
+import katex from "../vendor/katex/katex.mjs";
+import RevealInk from "./ink.js";
+
 // LaTeX macros available in every formula on every slide.
 const MACROS = {
   "\\R": "\\mathbb{R}",
@@ -16,24 +21,6 @@ for (const element of document.querySelectorAll("span.math")) {
   });
 }
 
-const CHALKBOARD_IMAGES = "vendor/reveal.js-plugins/chalkboard/img/";
-
-// Opaque, smooth ink rather than the plugin's default translucent chalk.
-// The same palette serves slide annotation and the full-screen board.
-const INK_COLORS = [
-  ["white", "rgba(255, 255, 255, 1)"],
-  ["yellow", "rgba(255, 220, 0, 1)"],
-  ["blue", "rgba(96, 154, 244, 1)"],
-  ["red", "rgba(237, 60, 60, 1)"],
-  ["green", "rgba(60, 220, 90, 1)"],
-  ["orange", "rgba(240, 150, 50, 1)"],
-  ["purple", "rgba(220, 90, 220, 1)"],
-];
-const INKS = INK_COLORS.map(([name, color]) => ({
-  color: color,
-  cursor: `url(${CHALKBOARD_IMAGES}chalk-${name}.png), auto`,
-}));
-
 Reveal.initialize({
   width: 1280,
   height: 720,
@@ -46,40 +33,18 @@ Reveal.initialize({
   controls: false,
   progress: true,
   slideNumber: "c/t",
+  // Always show slides (never reveal.js's narrow-screen scrolling layout),
+  // so that ink stays on its slide.
+  scrollActivationWidth: 0,
 
-  chalkboard: {
-    theme: "chalkboard",
-    chalkEffect: 0,
-    chalkWidth: 4,
-    boardmarkerWidth: 4,
-    chalks: INKS,
-    boardmarkers: INKS,
-    // [slide-annotation tint, board background]; the eraser repaints with the
-    // board background, so that one has to be an image.
-    background: ["rgba(255, 255, 255, 0.03)", "theme/black.png"],
-    grid: false,
-    transition: 0,
-    // Drawings persist in sessionStorage under this key (survives reloads,
-    // not closing the tab); press 'd' to download them as JSON.
-    storage: "slt-chalkboard",
-    // Previously saved drawings to replay, set via `chalkboard-src` metadata.
-    src: document.body.dataset.chalkboardSrc || null,
+  ink: {
+    colors: ["#ffffff", "#ff9933", "#999999", "#ff4dff"],
+    penWidth: 4,
+    eraserSize: 40,
+    laserColor: "#ff2a2a",
+    // Saved drawings to show, set via `ink-src` metadata in slides.md.
+    src: document.body.dataset.inkSrc || null,
   },
 
-  customcontrols: {
-    controls: [
-      {
-        icon: '<i class="fa fa-pen-square"></i>',
-        title: "Toggle chalkboard (B)",
-        action: "RevealChalkboard.toggleChalkboard();",
-      },
-      {
-        icon: '<i class="fa fa-pen"></i>',
-        title: "Toggle slide annotation (C)",
-        action: "RevealChalkboard.toggleNotesCanvas();",
-      },
-    ],
-  },
-
-  plugins: [RevealNotes, RevealChalkboard, RevealCustomControls],
+  plugins: [RevealNotes, RevealInk],
 });

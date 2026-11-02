@@ -11,9 +11,10 @@ PORT := 8390
 
 all: $(BUILD)/index.html assets
 
-$(BUILD)/index.html: slides.md theme/template.html
+$(BUILD)/index.html: slides.md theme/template.html filters/check-slide-ids.lua
 	@mkdir -p $(BUILD)
 	pandoc slides.md --from markdown --to revealjs --slide-level 2 \
+		--lua-filter filters/check-slide-ids.lua \
 		--katex --template theme/template.html --output $@
 
 # Copy our own sources and the parts of each npm package the page loads.
@@ -25,25 +26,19 @@ assets:
 	@rsync -a --delete --relative \
 		node_modules/reveal.js/dist/./reset.css \
 		node_modules/reveal.js/dist/./reveal.css \
-		node_modules/reveal.js/dist/./reveal.js \
-		node_modules/reveal.js/./plugin/notes/notes.js \
+		node_modules/reveal.js/dist/./reveal.mjs \
+		node_modules/reveal.js/dist/./plugin/notes.mjs \
 		$(BUILD)/vendor/reveal.js/
-	@rsync -a --delete node_modules/katex/dist/katex.min.js \
+	@rsync -a --delete node_modules/katex/dist/katex.mjs \
 		node_modules/katex/dist/katex.min.css \
 		node_modules/katex/dist/fonts \
 		$(BUILD)/vendor/katex/
-	@rsync -a --delete node_modules/@fortawesome/fontawesome-free/css \
-		node_modules/@fortawesome/fontawesome-free/webfonts \
-		$(BUILD)/vendor/fontawesome/
-	@rsync -a --delete node_modules/reveal.js-plugins/chalkboard \
-		node_modules/reveal.js-plugins/customcontrols \
-		$(BUILD)/vendor/reveal.js-plugins/
 
 # entr reruns make whenever a watched file changes; -d makes it exit when a
 # file is added to a watched directory, so the loop restarts with a fresh list.
 watch:
 	while true; do \
-		find slides.md theme widgets $$(ls -d drawings media 2>/dev/null) -type f \
+		find slides.md theme widgets filters $$(ls -d drawings media 2>/dev/null) -type f \
 			| entr -d $(MAKE) --no-print-directory; \
 	done
 

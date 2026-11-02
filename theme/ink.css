@@ -1,0 +1,106 @@
+/* Ink layer: a board backdrop and two canvases (ink; cursor and laser),
+   stacked over the slides inside reveal.js's slide container, plus a
+   toolbar fixed to the bottom-left corner of the window. */
+
+.reveal .ink-layer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+.reveal .ink-layer > * {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.reveal .ink-board {
+  display: none;
+  background: var(--ink-board-color, #000);
+}
+.reveal .ink-layer.board .ink-board {
+  display: block;
+}
+.reveal .ink-layer.active .ink-overlay {
+  pointer-events: auto;
+  cursor: none;
+  touch-action: none;
+}
+.reveal.overview .ink-layer,
+.reveal.overview .ink-toolbar {
+  display: none;
+}
+
+/* Toolbar: the drawing toggle, then (while drawing) the tools. */
+
+.ink-toolbar {
+  position: fixed;
+  left: 8px;
+  bottom: 8px;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.ink-toolbar .ink-tools {
+  display: none;
+  align-items: center;
+  gap: 2px;
+}
+.ink-toolbar.open .ink-tools {
+  display: flex;
+}
+.ink-toolbar .ink-button {
+  appearance: none;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #aaa;
+  cursor: pointer;
+}
+.ink-toolbar .ink-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.ink-toolbar .ink-button.selected {
+  background: rgba(255, 255, 255, 0.2);
+}
+.ink-toolbar .ink-button:disabled {
+  opacity: 0.3;
+  background: transparent;
+  cursor: default;
+}
+.ink-toolbar .ink-toggle {
+  opacity: 0.4;
+}
+.ink-toolbar .ink-toggle:hover,
+.ink-toolbar .ink-toggle.selected {
+  opacity: 1;
+}
+.ink-toolbar svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.ink-toolbar .ink-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink-color);
+}
+.ink-toolbar .ink-separator {
+  width: 1px;
+  height: 18px;
+  margin: 0 4px;
+  background: rgba(255, 255, 255, 0.25);
+}
