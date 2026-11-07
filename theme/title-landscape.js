@@ -21,6 +21,7 @@ export default function RevealTitleLandscape() {
       let lastFrame = null;
       let elapsed = 0;
       let dots = [];
+      const dotBuckets = Array.from({ length: 25 }, () => []);
 
       const draw = () => {
         if (!context) return;
@@ -32,7 +33,7 @@ export default function RevealTitleLandscape() {
         }
         const breath = (1 - Math.cos((2 * Math.PI * elapsed) / 16)) / 2;
         const band = 3.9 * breath;
-        const paths = Array.from({ length: 25 }, () => new Path2D());
+        for (const bucket of dotBuckets) bucket.length = 0;
         const gaussian = (distance) => Math.exp(-0.5 * (distance / 0.28) ** 2);
         for (const dot of dots) {
           const distance = dot.level - band;
@@ -42,15 +43,18 @@ export default function RevealTitleLandscape() {
             0.3 * gaussian(distance + 0.85),
           );
           const alpha = dot.fade * (0.035 + 0.75 * light);
-          const path = paths[Math.round(24 * alpha)];
-          const radius = 1.4 + 0.55 * light;
-          path.moveTo(dot.x + radius, dot.y);
-          path.arc(dot.x, dot.y, radius, 0, 2 * Math.PI);
+          dot.radius = 1.4 + 0.55 * light;
+          dotBuckets[Math.round(24 * alpha)].push(dot);
         }
         context.fillStyle = color;
-        for (let index = 1; index < paths.length; index++) {
+        for (let index = 1; index < dotBuckets.length; index++) {
           context.globalAlpha = index / 24;
-          context.fill(paths[index]);
+          context.beginPath();
+          for (const dot of dotBuckets[index]) {
+            context.moveTo(dot.x + dot.radius, dot.y);
+            context.arc(dot.x, dot.y, dot.radius, 0, 2 * Math.PI);
+          }
+          context.fill();
         }
         context.globalAlpha = 1;
       };
@@ -134,6 +138,7 @@ export default function RevealTitleLandscape() {
         motion.removeEventListener("change", sync);
         canvas?.remove();
         dots = [];
+        for (const bucket of dotBuckets) bucket.length = 0;
       };
     },
   };

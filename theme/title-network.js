@@ -92,13 +92,17 @@ export default function createTitleNetwork(width, height) {
     const spread = time < 0 ? 0.10 : 0.48;
     return Math.exp(-0.5 * (time / spread) ** 2);
   };
+  const edgeBuckets = Array.from({ length: 25 }, () => []);
+  const dotBuckets = Array.from({ length: 25 }, () => []);
+  const travelerBuckets = Array.from({ length: 25 }, () => []);
+  const ages = new Float64Array(pulseCount);
 
   return {
     draw(context, elapsed, color) {
-      const edgePaths = Array.from({ length: 25 }, () => new Path2D());
-      const dotPaths = Array.from({ length: 25 }, () => new Path2D());
-      const travelers = Array.from({ length: 25 }, () => new Path2D());
-      const ages = Array.from({ length: pulseCount }, (_, pulse) => pulseAge(elapsed, pulse));
+      for (const buckets of [edgeBuckets, dotBuckets, travelerBuckets]) {
+        for (const bucket of buckets) bucket.length = 0;
+      }
+      for (let pulse = 0; pulse < pulseCount; pulse++) ages[pulse] = pulseAge(elapsed, pulse);
 
       for (const edge of edges) {
         const { source, target } = edge;
@@ -114,14 +118,10 @@ export default function createTitleNetwork(width, height) {
           const x = source.x + fraction * (target.x - source.x);
           const y = source.y + fraction * (target.y - source.y);
           const fade = source.fade + fraction * (target.fade - source.fade);
-          const path = travelers[Math.round(24 * 0.45 * signal.amplitude * fade)];
-          path.moveTo(x + 0.9, y);
-          path.arc(x, y, 0.9, 0, 2 * Math.PI);
+          travelerBuckets[Math.round(24 * 0.45 * signal.amplitude * fade)].push(x, y);
         }
         const alpha = Math.sqrt(source.fade * target.fade) * (0.008 + 0.19 * light);
-        const path = edgePaths[Math.round(24 * alpha)];
-        path.moveTo(source.x, source.y);
-        path.lineTo(target.x, target.y);
+        edgeBuckets[Math.round(24 * alpha)].push(edge);
       }
 
       for (let index = 0; index < nodes.length; index++) {
@@ -131,10 +131,8 @@ export default function createTitleNetwork(width, height) {
           const signal = node.signals[pulse];
           light = Math.max(light, signal.amplitude * envelope(ages[pulse] - signal.arrival));
         }
-        const path = dotPaths[Math.round(24 * node.fade * (0.055 + 0.75 * light))];
-        const radius = 1.4 + 0.55 * light;
-        path.moveTo(node.x + radius, node.y);
-        path.arc(node.x, node.y, radius, 0, 2 * Math.PI);
+        node.radius = 1.4 + 0.55 * light;
+        dotBuckets[Math.round(24 * node.fade * (0.055 + 0.75 * light))].push(node);
       }
 
       context.strokeStyle = color;
@@ -142,9 +140,26 @@ export default function createTitleNetwork(width, height) {
       context.lineWidth = 0.65;
       for (let index = 1; index < 25; index++) {
         context.globalAlpha = index / 24;
-        context.stroke(edgePaths[index]);
-        context.fill(travelers[index]);
-        context.fill(dotPaths[index]);
+        context.beginPath();
+        for (const edge of edgeBuckets[index]) {
+          context.moveTo(edge.source.x, edge.source.y);
+          context.lineTo(edge.target.x, edge.target.y);
+        }
+        context.stroke();
+        context.beginPath();
+        const travelers = travelerBuckets[index];
+        for (let point = 0; point < travelers.length; point += 2) {
+          const x = travelers[point], y = travelers[point + 1];
+          context.moveTo(x + 0.9, y);
+          context.arc(x, y, 0.9, 0, 2 * Math.PI);
+        }
+        context.fill();
+        context.beginPath();
+        for (const node of dotBuckets[index]) {
+          context.moveTo(node.x + node.radius, node.y);
+          context.arc(node.x, node.y, node.radius, 0, 2 * Math.PI);
+        }
+        context.fill();
       }
       context.globalAlpha = 1;
     },
