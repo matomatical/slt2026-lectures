@@ -1,5 +1,8 @@
 # Singular Learning Theory slides
 
+> MFR: This readme and essentially all code in this repository written by
+> ChatGPT Sol 6.1. The text on the slides is my own.
+
 Slides for the Oxford
 [Singular Learning Theory course](https://kaiogden.net/slt/), Michaelmas 2026.
 The decks are written in Markdown, compiled by pandoc into
