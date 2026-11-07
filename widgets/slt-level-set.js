@@ -10,6 +10,8 @@
 //   range    half-width of the square (default 1).
 //   size     side length in slide pixels (default 480).
 
+import {setupWidgetKeys} from "./widget-controls.js";
+
 const RESOLUTION_MULTIPLIER = 2; // canvas pixels per slide pixel
 const EPSILON_DECADES = 5; // slider spans [max K · 10^-5, max K]
 
@@ -32,8 +34,7 @@ class SltLevelSet extends HTMLElement {
         <i>ε</i><input type="range" min="0" max="1000" value="500">
         <span class="readout"></span>
       </div>`;
-    // Keep arrow keys on the slider from changing slides.
-    root.addEventListener("keydown", (event) => event.stopPropagation());
+    setupWidgetKeys(root);
 
     this.canvas = root.querySelector("canvas");
     this.slider = root.querySelector("input");

@@ -1,0 +1,5 @@
+@import url("../vendor/katex/katex.min.css");
+
+.speaker-controls-notes .math.inline > .katex {
+  font-size: 1em;
+}

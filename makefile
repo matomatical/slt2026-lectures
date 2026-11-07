@@ -6,10 +6,10 @@
 BUILD := build
 HOST := $(shell tailscale ip -4 2>/dev/null || echo 127.0.0.1)
 PORT := 8390
-DECKS := $(patsubst decks/%/slides.md,%,$(wildcard decks/*/slides.md))
+DECKS := $(patsubst lectures/%/slides.md,%,$(wildcard lectures/*/slides.md))
 DECK_PAGES := $(addsuffix /index.html,$(addprefix $(BUILD)/,$(DECKS)))
 
-.PHONY: all assets reload watch serve serve-dev dev clean
+.PHONY: all assets public test test-browser reload watch serve serve-dev dev clean
 
 all: $(BUILD)/index.html $(DECK_PAGES) assets
 
@@ -17,11 +17,12 @@ $(BUILD)/index.html: index.html
 	@mkdir -p $(BUILD)
 	cp $< $@
 
-$(BUILD)/%/index.html: decks/%/slides.md theme/template.html filters/check-slide-ids.lua filters/comments-to-notes.lua
+$(BUILD)/%/index.html: lectures/%/slides.md theme/template.html filters/check-slide-ids.lua filters/comments-to-notes.lua filters/slide-columns.lua
 	@mkdir -p $(@D)
 	pandoc $< --from markdown --to revealjs --slide-level 2 \
 		--lua-filter filters/check-slide-ids.lua \
 		--lua-filter filters/comments-to-notes.lua \
+		--lua-filter filters/slide-columns.lua \
 		--variable asset-prefix=../ \
 		--katex --template theme/template.html --output $@
 
@@ -32,8 +33,8 @@ assets:
 	@for deck in $(DECKS); do \
 		mkdir -p "$(BUILD)/$$deck" || exit; \
 		for directory in drawings media; do \
-			if [ -d "decks/$$deck/$$directory" ]; then \
-				rsync -a --delete "decks/$$deck/$$directory" "$(BUILD)/$$deck/" || exit; \
+			if [ -d "lectures/$$deck/$$directory" ]; then \
+				rsync -a --delete "lectures/$$deck/$$directory" "$(BUILD)/$$deck/" || exit; \
 			else \
 				rm -rf "$(BUILD)/$$deck/$$directory"; \
 			fi; \
@@ -45,10 +46,24 @@ assets:
 		node_modules/reveal.js/dist/./reveal.mjs \
 		node_modules/reveal.js/dist/./plugin/notes.mjs \
 		$(BUILD)/vendor/reveal.js/
+	@cp node_modules/reveal.js/LICENSE $(BUILD)/vendor/reveal.js/LICENSE
 	@rsync -a --delete node_modules/katex/dist/katex.mjs \
 		node_modules/katex/dist/katex.min.css \
 		node_modules/katex/dist/fonts \
+		node_modules/katex/LICENSE \
 		$(BUILD)/vendor/katex/
+
+public: all
+	python3 tools/export_site.py
+
+test: all
+	python3 -m unittest discover -s tools -p 'test_*.py'
+	node tools/test_model_widgets.mjs
+	node tools/test_dln_loss.mjs
+
+# Requires Playwright and its Chromium browser, available to Node.js.
+test-browser: all
+	node tools/test_ink_preview.mjs
 
 # Notify browsers only after every build step succeeds.
 reload: all
@@ -59,7 +74,7 @@ reload: all
 # -n lets the watcher run without a terminal, including under a process manager.
 watch:
 	while true; do \
-		find makefile index.html package.json package-lock.json decks theme widgets filters tools \
+		find makefile index.html package.json package-lock.json lectures theme widgets filters tools \
 			| entr -dn $(MAKE) --no-print-directory reload; \
 		status=$$?; \
 		[ "$$status" -eq 2 ] || exit "$$status"; \

@@ -1,6 +1,7 @@
 {
   "name": "slt-lecture1",
   "private": true,
+  "type": "module",
   "description": "Front-end dependencies for the lecture slides, copied into build/ by the makefile.",
   "dependencies": {
     "katex": "0.16.22",

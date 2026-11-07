@@ -2,6 +2,7 @@
 
 import Reveal from "../vendor/reveal.js/reveal.mjs";
 import RevealNotes from "../vendor/reveal.js/plugin/notes.mjs";
+import RevealSpeakerNotes from "./speaker-notes.js";
 import katex from "../vendor/katex/katex.mjs";
 import RevealInk from "./ink.js";
 import RevealSectionProgress from "./section-progress.js";
@@ -50,5 +51,5 @@ Reveal.initialize({
     src: document.body.dataset.inkSrc || null,
   },
 
-  plugins: [RevealNotes, RevealInk, RevealSectionProgress, RevealTitleLandscape],
+  plugins: [RevealNotes, RevealSpeakerNotes, RevealInk, RevealSectionProgress, RevealTitleLandscape],
 });

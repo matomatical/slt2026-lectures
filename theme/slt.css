@@ -38,8 +38,8 @@
 body[data-progress-color="orange"] {
   --slt-progress-accent: #ff9933;
 }
-body[data-progress-color="purple"] {
-  --slt-progress-accent: #b399ff;
+body[data-progress-color="magenta"] {
+  --slt-progress-accent: #ff4dff;
 }
 
 html,
@@ -56,6 +56,16 @@ body,
 
 .reveal .slides {
   text-align: left;
+}
+
+/* Presenter previews: mark the drawing area's edge against black letterboxing. */
+.reveal .slides .presenter-slide-boundary {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border: 1px solid #999;
+  pointer-events: none;
+  z-index: 50;
 }
 
 .reveal .slides section {
@@ -148,6 +158,42 @@ body,
 .reveal section[data-ornament="punctured-axes"] {
   --slt-ornament: url("ornaments/punctured-axes.svg");
 }
+.reveal section[data-ornament="network-5"] {
+  --slt-ornament: url("ornaments/network-5.svg");
+}
+.reveal section[data-ornament="network-4"] {
+  --slt-ornament: url("ornaments/network-4.svg");
+}
+.reveal section[data-ornament="network-3"] {
+  --slt-ornament: url("ornaments/network-3.svg");
+}
+.reveal section[data-ornament="network-2"] {
+  --slt-ornament: url("ornaments/network-2.svg");
+}
+.reveal section[data-ornament="network-1"] {
+  --slt-ornament: url("ornaments/network-1.svg");
+}
+.reveal section[data-ornament="network-0"] {
+  --slt-ornament: url("ornaments/network-0.svg");
+}
+
+/* Three reductions: merge duplicates, remove a zero-output unit, absorb a constant. */
+
+.reveal section[data-ornament="network-short-3"] {
+  --slt-ornament: url("ornaments/network-short-3.svg");
+}
+
+.reveal section[data-ornament="network-short-2"] {
+  --slt-ornament: url("ornaments/network-short-2.svg");
+}
+
+.reveal section[data-ornament="network-short-1"] {
+  --slt-ornament: url("ornaments/network-short-1.svg");
+}
+
+.reveal section[data-ornament="network-short-0"] {
+  --slt-ornament: url("ornaments/network-short-0.svg");
+}
 
 /* Body text. */
 
@@ -183,6 +229,9 @@ body,
   color: var(--slt-foreground);
   text-decoration: underline;
 }
+.reveal .slides .math.inline > .katex {
+  font-size: 1em;
+}
 .reveal .slides .katex-display {
   margin: 0.6em 0;
 }
@@ -191,6 +240,11 @@ body,
 }
 .reveal .slides .centered {
   text-align: center;
+}
+
+.reveal .slides blockquote {
+  margin: 0.8em 1em;
+  font-style: italic;
 }
 
 /* Images, videos and widgets fill available width, centred. */
@@ -203,6 +257,21 @@ body,
   margin: 0 auto;
 }
 
+/* A compact portrait grid with room for four lecturers in a sidebar. */
+.reveal .slides .headshots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.reveal .slides .headshots > p {
+  margin: 0;
+}
+.reveal .slides .headshots img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
 /* Two columns, via pandoc's `:::: columns` / `::: column` divs. */
 
 .reveal .slides .columns {
@@ -211,6 +280,23 @@ body,
 }
 .reveal .slides .column {
   flex: 1;
+}
+
+/* Slide shorthand: .sidebar or .split, with --- between the columns. */
+.reveal .slides .columns.sidebar,
+.reveal .slides .columns.split {
+  gap: 1%;
+}
+.reveal .slides .columns.split > .column {
+  flex: 0 0 49.5%;
+  min-width: 0;
+}
+.reveal .slides .columns.sidebar > .column {
+  flex: 0 0 24%;
+  min-width: 0;
+}
+.reveal .slides .columns.sidebar > .column:first-child {
+  flex-basis: 75%;
 }
 
 /* Section progress: each segment is proportional to its slide count. */
@@ -257,6 +343,14 @@ body,
 .reveal .section-progress button:focus-visible {
   outline: 2px solid var(--slt-foreground);
   outline-offset: 2px;
+}
+
+/* Highlight mouse and keyboard navigation in the overview grid. */
+
+.reveal.overview .slides section:not(.stack):hover,
+.reveal.overview .slides section:not(.stack).present {
+  outline: 10px solid #ff9933;
+  outline-offset: 10px;
 }
 
 /* Slide number. */

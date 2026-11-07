@@ -73,6 +73,7 @@ class Ink {
     this.layers = new Map(); // layer key -> { ops, redo }
     this.savedLayers = new Map(); // layer key -> ops loaded from options.src
     this.storagePrefix = `ink:${location.pathname}:`;
+    this.liveState = null;
 
     this.active = false; // whether pointer input goes to the ink layer
     this.tool = "pen"; // "pen", "eraser" or "laser"
@@ -92,6 +93,14 @@ class Ink {
       }
     }
     this.loadFromStorage();
+    this.connectLivePreview();
+    window.addEventListener("pagehide", () => {
+      this.liveChannel?.close();
+      this.liveChannel = null;
+    });
+    window.addEventListener("pageshow", (event) => {
+      if (event.persisted) this.connectLivePreview();
+    });
 
     deck.on("ready", () => {
       this.resize();
@@ -104,6 +113,49 @@ class Ink {
     deck.on("slidechanged", () => this.onSlideChanged());
     deck.on("overviewshown", () => this.setActive(false));
     window.addEventListener("storage", (event) => this.onStorage(event));
+  }
+
+  // Storage keeps finished drawings durable; the channel carries transient
+  // input without writing cursor movements or unfinished strokes to storage.
+  connectLivePreview() {
+    if (!("BroadcastChannel" in window)) return;
+    this.liveChannel = new BroadcastChannel(`${this.storagePrefix}live`);
+    this.liveChannel.onmessage = ({ data }) => {
+      if (this.interactive) {
+        if (data.request) this.publishLive(this.slideKey());
+        return;
+      }
+      if (!data.state) return;
+      const hadOperation = this.liveState?.gesture?.operation;
+      this.liveState = data.state;
+      // Each window has its own performance clock. Translate release times
+      // so fading laser traces retain their age in the preview.
+      for (const trace of this.liveState.laserTraces) {
+        if (trace.releasedAt !== null) trace.releasedAt -= performance.timeOrigin;
+      }
+      if (data.layer) {
+        this.layer(data.layer.key).ops = data.layer.ops;
+        this.layer(data.layer.key).redo = [];
+      }
+      if (data.layer || hadOperation || this.liveState.gesture?.operation) this.renderInk();
+      this.requestOverlay();
+    };
+    if (!this.interactive) this.liveChannel.postMessage({ request: true });
+  }
+
+  publishLive(layerKey) {
+    if (!this.interactive || !this.liveChannel) return;
+    const state = {
+      key: this.slideKey(), active: this.active, cursor: this.cursor,
+      tool: this.tool, colorIndex: this.colorIndex, gesture: this.gesture,
+      laserTraces: this.laserTraces.map((trace) => ({
+        points: trace.points,
+        releasedAt: trace.releasedAt === null ? null : trace.releasedAt + performance.timeOrigin,
+      })),
+    };
+    const layer = layerKey === undefined ? undefined
+      : { key: layerKey, ops: this.layer(layerKey).ops };
+    this.liveChannel.postMessage({ state, layer });
   }
 
   // --- DOM ---------------------------------------------------------------
@@ -273,7 +325,8 @@ class Ink {
   }
 
   onSlideChanged() {
-    if (this.gesture) this.finishGesture();
+    if (this.interactive && this.gesture) this.finishGesture();
+    this.cursor = null;
     this.laserTraces = [];
     this.renderInk();
     this.updateToolbar();
@@ -465,8 +518,9 @@ class Ink {
     for (const operation of visibleOperations(this.layer().ops)) {
       applyOperation(context, operation);
     }
-    if (this.gesture?.operation && this.gesture.layerKey === this.slideKey()) {
-      const operation = this.gesture.operation;
+    const gesture = this.interactive ? this.gesture : this.liveState?.gesture;
+    if (gesture?.operation && gesture.layerKey === this.slideKey()) {
+      const operation = gesture.operation;
       if (operation.kind === "stroke") {
         // The final segment is added on release; while drawing, the curve
         // ends at the midpoint before the last sample.
@@ -482,6 +536,7 @@ class Ink {
     this.overlayFrame = requestAnimationFrame((now) => {
       this.overlayFrame = null;
       this.renderOverlay(now);
+      this.publishLive();
     });
   }
 
@@ -495,19 +550,22 @@ class Ink {
     context.setTransform(this.scaleX, 0, 0, this.scaleY, 0, 0);
 
     const { laserColor, laserWidth, laserFadeMs } = this.options;
+    const live = this.interactive ? this
+      : this.liveState?.key === this.slideKey() ? this.liveState : null;
     const age = (trace) => (trace.releasedAt === null ? 0 : now - trace.releasedAt);
-    this.laserTraces = this.laserTraces.filter((trace) => age(trace) < laserFadeMs);
-    for (const trace of this.laserTraces) {
+    const traces = (live?.laserTraces ?? []).filter((trace) => age(trace) < laserFadeMs);
+    if (live) live.laserTraces = traces;
+    for (const trace of traces) {
       context.globalAlpha = Math.max(0, 1 - age(trace) / laserFadeMs);
       this.drawLaser(context, trace.points, laserColor, laserWidth);
     }
     context.globalAlpha = 1;
 
-    if (this.active && this.cursor) {
-      const [x, y] = this.cursor;
-      const tool = this.gesture?.tool ?? this.tool;
+    if (live?.active && live.cursor) {
+      const [x, y] = live.cursor;
+      const tool = live.gesture?.tool ?? live.tool;
       if (tool === "pen") {
-        const color = this.options.colors[this.colorIndex];
+        const color = this.options.colors[live.colorIndex];
         drawStroke(context, { color, width: Math.max(this.options.penWidth, 5), points: [x, y] }, 1, 1);
       } else if (tool === "eraser") {
         const size = this.options.eraserSize;
@@ -521,7 +579,7 @@ class Ink {
       }
     }
 
-    if (this.laserTraces.some((trace) => trace.releasedAt !== null)) this.requestOverlay();
+    if (traces.some((trace) => trace.releasedAt !== null)) this.requestOverlay();
   }
 
   // A glowing line with a pale core.
@@ -542,6 +600,7 @@ class Ink {
     } catch (error) {
       console.warn("ink: could not store drawings:", error);
     }
+    this.publishLive(key);
   }
 
   storedKeys() {

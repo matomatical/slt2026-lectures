@@ -1,16 +1,19 @@
-// A top-down dot matrix of K(x, y) = (x² - y^m)² for odd cusp powers m.
-// The height bands that illuminate the dots move logarithmically up and
-// down the fixed landscape.
+// Animated title backgrounds: height bands on a fixed cusp landscape,
+// or activations propagating through a sparse network.
+import createTitleNetwork from "./title-network.js";
+
 export default function RevealTitleLandscape() {
   return {
     id: "title-landscape",
     init(deck) {
       const slide = deck.getRevealElement().querySelector("#title-slide[data-landscape]");
       const power = { cusp: 3, "cusp-5": 5, "cusp-7": 7 }[slide?.dataset.landscape];
-      if (!power) return;
+      const isNetwork = slide?.dataset.landscape === "network";
+      if (!power && !isNetwork) return;
 
       const width = deck.getConfig().width;
       const height = deck.getConfig().height;
+      const network = isNetwork ? createTitleNetwork(width, height) : null;
       const motion = matchMedia("(prefers-reduced-motion: reduce)");
       let canvas;
       let context;
@@ -22,6 +25,11 @@ export default function RevealTitleLandscape() {
       const draw = () => {
         if (!context) return;
         context.clearRect(0, 0, width, height);
+        const color = getComputedStyle(slide).getPropertyValue("--slt-landscape-color").trim();
+        if (network) {
+          network.draw(context, elapsed, color);
+          return;
+        }
         const breath = (1 - Math.cos((2 * Math.PI * elapsed) / 16)) / 2;
         const band = 3.9 * breath;
         const paths = Array.from({ length: 25 }, () => new Path2D());
@@ -39,7 +47,7 @@ export default function RevealTitleLandscape() {
           path.moveTo(dot.x + radius, dot.y);
           path.arc(dot.x, dot.y, radius, 0, 2 * Math.PI);
         }
-        context.fillStyle = getComputedStyle(slide).getPropertyValue("--slt-landscape-color").trim();
+        context.fillStyle = color;
         for (let index = 1; index < paths.length; index++) {
           context.globalAlpha = index / 24;
           context.fill(paths[index]);
@@ -85,7 +93,7 @@ export default function RevealTitleLandscape() {
         context = canvas.getContext("2d");
 
         const unit = height / 2.8;
-        for (let row = 6; row < height; row += 10) {
+        for (let row = 6; !network && row < height; row += 10) {
           for (let column = 6; column < width; column += 10) {
             // Swap the plotting axes to match the right-opening cusp ornament.
             const x = (height / 2 - row) / unit;
