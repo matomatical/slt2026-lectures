@@ -25,27 +25,42 @@ for (const n of [0, 4, 64, 4096]) {
 }
 
 let shown = false;
-let callback;
+let nextFrame = 0;
+const frames = new Map();
+const visibilityListeners = new Set();
+const motionListeners = new Set();
+let slidePresent = true;
 const revealClasses = new Set();
 const fragment = { classList: { contains: () => shown } };
 const reveal = { classList: { contains: (name) => revealClasses.has(name) } };
 const slide = {
-  classList: { contains: (name) => name === "present" },
+  classList: { contains: (name) => name === "present" && slidePresent },
   querySelector: () => fragment,
 };
 globalThis.location = { search: "" };
 globalThis.document = {
   hidden: false,
   body: { classList: { contains: () => false } },
-  addEventListener() {},
-  removeEventListener() {},
+  addEventListener(name, callback) { visibilityListeners.add(callback); },
+  removeEventListener(name, callback) { visibilityListeners.delete(callback); },
 };
 globalThis.MutationObserver = class { observe() {} disconnect() {} };
 globalThis.matchMedia = () => ({
-  matches: false, addEventListener() {}, removeEventListener() {},
+  matches: false,
+  addEventListener(name, callback) { motionListeners.add(callback); },
+  removeEventListener(name, callback) { motionListeners.delete(callback); },
 });
-globalThis.requestAnimationFrame = (next) => { callback = next; return 1; };
-globalThis.cancelAnimationFrame = () => {};
+globalThis.requestAnimationFrame = (callback) => {
+  frames.set(++nextFrame, callback);
+  return nextFrame;
+};
+globalThis.cancelAnimationFrame = (frame) => { frames.delete(frame); };
+
+function advance(now) {
+  const callbacks = [...frames.values()];
+  frames.clear();
+  for (const callback of callbacks) callback(now);
+}
 
 const widget = new SltSingularModel();
 widget.shadowRoot = {};
@@ -58,9 +73,10 @@ assert.equal(widget.frame, null);
 shown = true;
 widget.sync();
 assert.equal(widget.active, true);
-for (let now = 0; now <= 13000; now += 50) callback(now);
+for (let now = 0; now <= 13000; now += 50) advance(now);
 assert.equal(widget.progress, 1);
 assert.equal(widget.frame, null);
+assert.equal(frames.size, 0);
 
 shown = false;
 widget.sync();
@@ -82,5 +98,35 @@ widget.sync();
 assert.equal(widget.posteriorVisible(), true);
 assert.equal(widget.progress, 1);
 widget.disconnectedCallback();
+assert.equal(visibilityListeners.size, 0);
+assert.equal(motionListeners.size, 0);
+
+// Reattaching the same element must reuse its handlers, retain only one loop,
+// and release external subscriptions on every disconnection.
+revealClasses.clear();
+shown = true;
+const sync = widget.sync, tick = widget.tick;
+for (let connection = 0; connection < 3; connection++) {
+  widget.connectedCallback();
+  assert.equal(widget.sync, sync);
+  assert.equal(widget.tick, tick);
+  assert.equal(visibilityListeners.size, 1);
+  assert.equal(motionListeners.size, 1);
+  assert.equal(frames.size, 1);
+  widget.sync();
+  widget.sync();
+  assert.equal(frames.size, 1);
+  slidePresent = false;
+  widget.sync();
+  assert.equal(frames.size, 0);
+  slidePresent = true;
+  widget.sync();
+  assert.equal(widget.elapsed, 0);
+  assert.equal(frames.size, 1);
+  widget.disconnectedCallback();
+  assert.equal(frames.size, 0);
+  assert.equal(visibilityListeners.size, 0);
+  assert.equal(motionListeners.size, 0);
+}
 
 console.log("Posterior normalization and fragment lifecycle checks passed.");

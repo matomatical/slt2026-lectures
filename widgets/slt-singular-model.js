@@ -5,7 +5,7 @@
 // A fragment marked data-slt-posterior reveals the posterior on its slide.
 // Without that fragment (e.g. in the gallery), the posterior plays immediately.
 
-import { SltRegularModel } from "./slt-regular-model.js";
+import { SltRegularModel, createPosteriorSurface } from "./slt-regular-model.js";
 
 const PRIOR_VARIANCE = 0.25;
 const FINAL_N = 4096;
@@ -121,23 +121,8 @@ export class SltSingularModel extends SltRegularModel {
       const height = (u, v) => peak * Math.exp(
         -(u * u + v * v) / (2 * PRIOR_VARIANCE) - n * (u * v) ** 2 / 2,
       );
-      const step = 2 * range / GRID;
-      const tiles = [];
-      for (let row = 0; row < GRID; row++) {
-        for (let column = 0; column < GRID; column++) {
-          const u = -range + column * step, v = -range + row * step;
-          const corners = [[u, v], [u + step, v], [u + step, v + step], [u, v + step]];
-          const heights = corners.map(([x, y]) => height(x, y));
-          if (Math.max(...heights) < 0.25) continue;
-          tiles.push({ depth: u + v, points: corners.map(([x, y], index) => project(x, y, heights[index])) });
-        }
-      }
-      tiles.sort((left, right) => left.depth - right.depth);
-      context.fillStyle = "rgba(255,153,51,0.26)";
-      for (const tile of tiles) {
-        path(tile.points, true);
-        context.fill();
-      }
+      this.posteriorSurface ??= createPosteriorSurface(GRID);
+      this.posteriorSurface.draw(context, height);
       context.strokeStyle = "rgba(255,170,85,0.45)";
       context.lineWidth = 0.7;
       // Draw both families of meridians to show the two posterior ridges.

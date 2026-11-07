@@ -12,7 +12,56 @@ const FINAL_N = 64;
 const DURATION = 12;
 const GRID = 52;
 
+// The camera, grid and painter order are fixed. Only the posterior heights
+// change between frames; keep one mesh and four scratch heights per widget.
+export function createPosteriorSurface(grid) {
+  const range = 1.1, step = 2 * range / grid;
+  const tiles = [];
+  for (let row = 0; row < grid; row++) {
+    for (let column = 0; column < grid; column++) {
+      const u = -range + column * step, v = -range + row * step;
+      tiles.push({
+        depth: u + v,
+        corners: [[u, v], [u + step, v], [u + step, v + step], [u, v + step]].map(
+          ([u, v]) => ({ u, v, x: 155 + 62 * (u - v), y: 243 + 25 * (u + v) }),
+        ),
+      });
+    }
+  }
+  tiles.sort((left, right) => left.depth - right.depth);
+  const heights = new Float64Array(4);
+  return {
+    draw(context, height) {
+      context.fillStyle = "rgba(255,153,51,0.26)";
+      for (const tile of tiles) {
+        let maximum = 0;
+        for (let index = 0; index < 4; index++) {
+          const corner = tile.corners[index];
+          heights[index] = height(corner.u, corner.v);
+          maximum = Math.max(maximum, heights[index]);
+        }
+        if (maximum < 0.25) continue;
+        context.beginPath();
+        for (let index = 0; index < 4; index++) {
+          const corner = tile.corners[index];
+          const y = corner.y - heights[index];
+          if (index === 0) context.moveTo(corner.x, y);
+          else context.lineTo(corner.x, y);
+        }
+        context.closePath();
+        context.fill();
+      }
+    },
+  };
+}
+
 export class SltRegularModel extends HTMLElement {
+  constructor() {
+    super();
+    this.sync = this.sync.bind(this);
+    this.tick = this.tick.bind(this);
+  }
+
   connectedCallback() {
     if (!this.shadowRoot) this.setup();
     this.elapsed = 0;
@@ -20,8 +69,6 @@ export class SltRegularModel extends HTMLElement {
     this.frame = null;
     this.active = false;
     this.motion = matchMedia("(prefers-reduced-motion: reduce)");
-    this.sync = this.sync.bind(this);
-    this.tick = this.tick.bind(this);
     this.observer = new MutationObserver(this.sync);
     const reveal = this.closest(".reveal");
     if (reveal) {
@@ -183,25 +230,11 @@ export class SltRegularModel extends HTMLElement {
       const x = u - mean[0], y = v - mean[1];
       return 164 * n / FINAL_N * Math.exp(-n * (a * x * x + 2 * b * x * y + c * y * y) / 2);
     };
-    const tiles = [];
-    const range = 1.1, step = 2 * range / GRID;
-    for (let row = 0; row < GRID; row++) {
-      for (let column = 0; column < GRID; column++) {
-        const u = -range + column * step, v = -range + row * step;
-        const corners = [[u, v], [u + step, v], [u + step, v + step], [u, v + step]];
-        const heights = corners.map(([x, y]) => height(x, y));
-        if (Math.max(...heights) < 0.25) continue;
-        tiles.push({ depth: u + v, points: corners.map(([x, y], index) => project(x, y, heights[index])) });
-      }
-    }
-    tiles.sort((left, right) => left.depth - right.depth);
-    context.fillStyle = "rgba(255,153,51,0.26)";
-    for (const tile of tiles) {
-      path(tile.points, true);
-      context.fill();
-    }
+    this.posteriorSurface ??= createPosteriorSurface(GRID);
+    this.posteriorSurface.draw(context, height);
 
     // Sparse meridians keep the surface legible at sidebar size.
+    const range = 1.1;
     context.strokeStyle = "rgba(255,170,85,0.45)";
     context.lineWidth = 0.7;
     for (let index = -3; index <= 3; index++) {
